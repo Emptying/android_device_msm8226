@@ -1,0 +1,163 @@
+import init.A500KL.rc
+
+#--------------------------------------------------------------------------------
+# on post fs data
+#--------------------------------------------------------------------------------
+on post-fs-data
+# mount asusdata
+    mkdir /data/asusdata 0660 root shell
+    wait /dev/block/platform/msm_sdcc.1/by-name/asusdata
+    exec /system/bin/e2fsck -p /dev/block/platform/msm_sdcc.1/by-name/asusdata
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/asusdata /data/asusdata ro nosuid nodev barrier=1 noauto_da_alloc
+
+    chmod 0775 /data/asusdata
+    chown shell shell /data/asusdata
+    
+#ASUSDEBUG + jeffery_hu@asus.com
+
+#ASUS_BSP +++ tyree_liu@asus.com "add link for audio ATD test"
+    symlink /system/bin/AudioRoutingTest /data/data/AudioRoutingTest
+    chmod 0777 /data/data/AudioRoutingTest
+
+    symlink /sys/class/switch/h2w/state /data/data/headset_status
+    chmod 0777 /data/data/headset_status
+
+    symlink /proc/driver/audio_codec /data/data/audio_codec_status
+    chmod 0777 /data/data/audio_codec_status
+#ASUS_BSP --- tyree_liu@asus.com "add link for audio ATD test"
+
+#ASUS_BSP +++ jie add "for camera ATD interface,mount Asus Camera Calibration Partition(ACC)"
+    mkdir /data/ACC0 0660 root shell
+    wait /dev/block/platform/msm_sdcc.1/by-name/asuskey4
+    exec /system/bin/e2fsck -p /dev/block/platform/msm_sdcc.1/by-name/asuskey4
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/asuskey4 /data/ACC0 ro nosuid nodev barrier=1 noauto_da_alloc
+    chmod 0775 /data/ACC0
+    chown root shell /data/ACC0
+
+    mkdir /data/ACC1 0660 root shell
+    wait /dev/block/platform/msm_sdcc.1/by-name/asuskey5
+    exec /system/bin/e2fsck -p /dev/block/platform/msm_sdcc.1/by-name/asuskey5
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/asuskey5 /data/ACC1 ro nosuid nodev barrier=1 noauto_da_alloc
+    chmod 0775 /data/ACC1
+    chown root shell /data/ACC1
+#ASUS_BSP --- jie add "for camera ATD interface,mount Asus Camera Calibration Partition(ACC)"
+
+#ASUS BSP Freeman:for firmware updata+++
+    chmod 0200 /sys/class/input/input1/imagesize
+    chmod 0200 /sys/class/input/input1/doreflash
+    chmod 0200 /sys/class/input/input1/data
+#ASUS BSP Freeman:for firmware updata+++
+
+#ASUS BSP Freeman:for firmware update progress+++
+	symlink /sys/class/input/input1/progress  /data/touch_update_progress
+#ASUS BSP Freeman:for firmware update progress--------
+
+    chmod 0200 /sys/class/input/input1/configarea
+    chmod 0200 /sys/class/input/input1/imagename
+    chmod 0200 /sys/class/input/input1/readconfig
+    chmod 0200 /sys/class/input/input1/reset
+    chmod 0200 /sys/class/input/input1/writeconfig
+    chmod 0200 /sys/class/input/input1/writelockdown
+    chmod 0200 /sys/class/input/input1/rmidev/open
+    chmod 0200 /sys/class/input/input1/rmidev/release
+    chmod 0644 /sys/class/input/input1/flipx
+    chmod 0644 /sys/class/input/input1/flipy
+    chmod 0644 /sys/class/input/input1/0dbutton
+    chmod 0644 /sys/class/input/input1/full_pm_cycle
+    chmod 0644 /sys/class/input/input1/suspend
+	chmod 0644 /sys/class/input/input1/glove_mode
+	chmod 0644 /sys/class/input/input1/rmidev/data
+#ASUS_BSP +++ tyree_liu@asus.com "add asus audbg service for headset uart debug"
+service asus_audbg /system/etc/init.asus.audbg.sh
+    user root
+    group root
+    disabled
+    oneshot
+
+on property:persist.asus.audbg=0
+    start asus_audbg
+
+on property:persist.asus.audbg=1
+    start asus_audbg
+
+on property:persist.asus.audbg=2
+    start asus_audbg
+
+#ASUS_BSP --- tyree_liu@asus.com "add asus audbg service for headset uart debug"
+
+# ASUS_BSP+++ mei_huang "[Audio] Add persist property for MaxxAudio"
+service maxx_mode_switch /system/etc/init.asus.maxxaudio.sh
+    user root
+    group root
+    disabled
+    oneshot
+
+on property:sys.config.maxxaudio=0
+    start maxx_mode_switch
+
+on property:sys.config.maxxaudio=1
+    start maxx_mode_switch
+
+on property:sys.config.maxxaudio=2
+    start maxx_mode_switch
+
+on property:sys.config.maxxaudio=3
+    start maxx_mode_switch
+
+on property:sys.config.maxxaudio=4
+    start maxx_mode_switch
+
+on property:sys.config.maxxaudio=5
+    start maxx_mode_switch
+# ASUS_BSP--- mei_huang "[Audio] Add persist property for MaxxAudio"
+
+#ASUS_BSP+++ [thomas] enable user version debug
+service asusdebug /system/bin/sh /system/etc/prepare_asusdebug.sh
+    class late_start
+    oneshot
+    disabled
+
+on property:persist.asus.debug=1
+	export PATH /sbin:/vendor/bin:/system/sbin:/system/bin:/system/xbin:/data/debug
+	start asusdebug
+#ASUS_BSP--- [thomas] enable user version debug
+#ASUSDEBUG -
+
+#ASUS_BSP Johnny  tcpdump_warp service to save tcpdump to /sdcard
+service tcpdump-warp /system/xbin/netlog.sh
+    class late_start
+    user root 
+    group root 
+    disabled
+#ASUS_BSP Johnny tcpdump_warp service to save tcpdump to /sdcard
+
+#ASUS_BSP +++ Yujoe "[A60K][Diag][N/A][Improve]Improve the process of saving QXDM log to SD card."
+service diag_mdlog /system/bin/diag_mdlog
+    class late_start
+    disabled
+
+on property:persist.asus.qxdmlog.enable=1
+    start diag_mdlog  
+
+on property:persist.asus.qxdmlog.enable=0
+    stop diag_mdlog
+    write /sys/power/wake_unlock diag_fwrite
+
+on property:debug.asus.qxdmlog.enable=1
+    start diag_mdlog  
+
+on property:debug.asus.qxdmlog.enable=0
+    stop diag_mdlog
+    write /sys/power/wake_unlock diag_fwrite
+#ASUS_BSP --- Yujoe "[A60K][Diag][N/A][Improve]Improve the process of saving QXDM log to SD card."
+
+# ASUS_BSP +++ key install server
+service ins_key /system/bin/install_key_server
+    class late_start
+    user root
+    group root
+    disabled
+
+on property:atd.start.key.install=1
+    start ins_key
+# ASUS_BSP +++ key install server

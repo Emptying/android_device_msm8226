@@ -1,0 +1,179 @@
+
+#----------------------------------------------------------------------
+# on init
+#----------------------------------------------------------------------
+on init
+	mkdir /asdf 0771 system system
+	mkdir /APD 0660 system system
+	mkdir /ADF 0775 system system
+#add factory dir for calibrarion display color
+	symlink /data/asusdata  /factory
+	chmod 0777 /factory
+#add factory dir for calibrarion display color
+
+#ASUS BSP Freeman:for glove mode +++
+setprop  persist.asus.glove   0
+setprop  persist.asus.instant_camera   0
+setprop  ro.epad.mount_point.microsd "/Removable/MicroSD"
+setprop  ro.bsp.app2sd  true
+
+on property:persist.asus.glove=0
+	write /sys/class/input/input1/glove_mode 0
+on property:persist.asus.glove=1
+	write /sys/class/input/input1/glove_mode 1
+#ASUS BSP Freeman:for glove mode
+
+#ASUS BSP Freeman:for instant_camera mode +++
+on property:persist.asus.instant_camera=0
+	write /sys/devices/gpio_keys.73/doublevaluekeyforcamera 0
+on property:persist.asus.instant_camera=1
+	write /sys/devices/gpio_keys.73/doublevaluekeyforcamera 1
+#ASUS BSP Freeman:for instant_camera mode
+
+# ASUS_BSP+++ ChanceChen "add save-hcidump service"
+service save-hcidump /system/bin/sh /system/etc/init.asus.hcidump.sh
+    class late_start
+    user root
+    group root
+    disabled
+    oneshot
+# ASUS_BSP--- ChanceChen "add save-hcidump service"
+# ASUS_BSP+++ ChanceChen "stop btsnoop log recorder as hcidump service stop"
+on property:init.svc.save-hcidump=stopped
+    setprop debug.bluetooth.btsnoop false
+    chmod 775 /data/logcat_log
+# ASUS_BSP--- ChanceChen "stop btsnoop log recorder as hcidump service stop"
+
+#----------------------------------------------------------------------
+# on fs
+#----------------------------------------------------------------------
+on fs
+# mount asdf
+    wait /dev/block/platform/msm_sdcc.1/by-name/tombstones
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/tombstones /asdf nosuid nodev barrier=1
+
+# mount ADF
+    wait /dev/block/platform/msm_sdcc.1/by-name/ADF
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/ADF /ADF nosuid nodev barrier=1
+    chown system system /ADF
+    chmod 775 /ADF
+#----------------------------------------------------------------------
+# on post fs data
+#----------------------------------------------------------------------
+on post-fs-data
+	mkdir /data/asusfw 0775 root shell
+    wait /dev/block/platform/msm_sdcc.1/by-name/asusfw
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/asusfw /data/asusfw ro nosuid nodev barrier=1
+
+#ASUSDEBUG + jeffery_hu@asus.com
+#ASUS_BSP +++ Allen1_Huang "Add asus_log folder"
+    mkdir /data/media/asus_log
+    chown sdcard_rw sdcard_rw /data/media/asus_log
+    chmod 0755 /data/media/asus_log
+#ASUS_BSP --- Allen1_Huang "Add asus_log folder"
+#ASUS_BSP+++ [thomas]move from init.asus.debugtool.rc 
+    chmod 0775 /data/log 
+#ASUS_BSP--- [thomas]move from init.asus.debugtool.rc
+
+# ASUS_BSP +++ lei_guo "emmc info for ATD"
+    symlink /sys/devices/msm_sdcc.1/mmc_host/mmc0/mmc0:0001/emmc_status /data/data/emmc_status
+    symlink /sys/devices/msm_sdcc.1/mmc_host/mmc0/mmc0:0001/emmc_size /data/data/emmc_size
+    symlink /sys/devices/msm_sdcc.1/mmc_host/mmc0/mmc0:0001/emmc_total_size /data/data/emmc_total_size
+    symlink /sys/devices/msm_sdcc.1/mmc_host/mmc0/mmc0:0001/emmc_prv /data/data/emmc_fw
+    chmod 0777 /data/data/emmc_status
+    chmod 0777 /data/data/emmc_size
+    chmod 0777 /data/data/emmc_total_size
+    chmod 0777 /data/data/emmc_fw
+# ASUS_BSP --- lei_guo "emmc info for ATD"
+
+# ASUS BSP Freeman: touch self test +++
+	symlink /system/bin/synaptics_production_test /data/data/synaptics_production_test
+	chmod 0777 /data/data/synaptics_production_test
+	symlink /system/bin/touch_self_test /data/data/touch_self_test
+	chmod 0777 /data/data/touch_self_test
+# ASUS BSP Freeman: touch self test ---
+
+# ASUS BSP freeman  add for SKU
+	symlink /sys/devices/system/soc/soc0/sku_info /data/data/SkuInfo
+	chmod 0777 /data/data/SkuInfo
+# ASUS BSP freeman  add for SKU
+	chmod 0777 /system/etc/init.asus.cache-partition.sh
+	exec /system/bin/sh /system/etc/init.asus.cache-partition.sh
+#ASUS_BSP +++ lei_guo "change the dirty_ratio from 20 to 10"
+on property:vold.decrypt=trigger_shutdown_framework
+	write /proc/sys/vm/dirty_ratio 10
+#ASUS_BSP --- lei_guo "change the dirty_ratio from 20 to 10"
+
+#----------------------------------------------------------------------
+# touch fw update service
+#----------------------------------------------------------------------
+# ASUS BSP Freeman:for firmware updata+++
+service SynaAuto /system/bin/syna_auto_update
+	class late_start
+	user root
+	group root
+	oneshot
+#ASUS BSP Freeman:for firmware update --------
+
+
+#ASUS_BSP+++ Josh_Liao "setup qpst download mode and ramdump to MicroSD"
+on property:persist.sys.downloadmode.enable=1
+    write /sys/module/restart/parameters/download_mode 1
+
+on property:persist.sys.downloadmode.enable=0
+    write /sys/module/restart/parameters/download_mode 0
+#ASUS_BSP--- Josh_Liao "setup qpst download mode and ramdump to MicroSD"
+
+#ASUS_BSP +++ Allen1_Huang
+service asusevtlog /system/bin/sh /system/etc/init.asus.evtlog.sh
+    class late_start
+    oneshot
+    disabled
+
+on property:sys.asus.evtlog=1
+    start asusevtlog
+on property:sys.asus.evtlog=0
+    start asusevtlog
+#ASUS_BSP --- Allen1_Huang
+#ASUSDEBUG -
+
+
+#----------------------------------------------------------------------
+# set color id prop by idcode.sh
+#----------------------------------------------------------------------
+# ASUS BSP Freeman:get color id+++
+service Colorid /system/bin/idcode.sh
+    class late_start
+    user root
+    oneshot
+#ASUS BSP Freeman:get color id --------
+
+#----------------------------------------------------------------------
+# mount APD service
+#----------------------------------------------------------------------
+#ASUS_BSP Alex+: Add for mount APD partition
+service mount-cache2 /system/bin/sh /system/etc/init.asus.mount-cache2.sh
+    class late_start
+    oneshot
+
+service update-cache2 /system/bin/sh /system/etc/init.asus.cache-partition.sh
+    class late_start
+    oneshot
+
+on property:persist.sys.enableAPD=1
+    start mount-cache2
+
+on property:persist.sys.enableAPD=0
+    start mount-cache2
+#ASUS_BSP Alex-: Add for mount APD partition
+
+
+#ASUS_BSP +++ Zhengwei_Cai "add CPU Boost capability"
+service camera_perf /system/etc/camera_perf.sh
+    class late_start
+    disabled
+    oneshot
+
+on property:camera.cpu.boost=*
+    start camera_perf
+#ASUS_BSP --- Zhengwei_Cai "add CPU Boost capability"

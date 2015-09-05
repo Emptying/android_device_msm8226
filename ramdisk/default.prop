@@ -1,0 +1,14 @@
+#
+# ADDITIONAL_DEFAULT_PROPERTIES
+#
+ro.build.version.incremental=CN_Phone-11.4.6.94-20141218
+ro.build.csc.version=CN_A500KL-11.4.6.94-20141218
+ro.secure=1
+ro.adb.secure=1
+ro.allow.mock.location=0
+ro.debuggable=0
+persist.sys.strict_op_enable=false
+persist.sys.whitelist=/system/etc/whitelist_appops.xml
+persist.sys.usb.config=mtp
+ro.service.cdrom.path=/system/etc/cdrom_install.iso
+persist.service.cdrom.enable=1
